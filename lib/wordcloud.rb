@@ -1,30 +1,48 @@
+require 'json'
+
 class WordCloud
   def initialize(input)
-    @input = input
+    @input = JSON.parse(input)
     @output = ""
     @wordhash = Hash.new
   end
 
   # Splits corpus on words
-  def parse
-    splitinput = @input.split(" ")
-    
-    splitinput.each do |w|
-      if w.include? "\\n"
-        w.gsub!("\\n", "<br />")
+  def parse   
+    docnum = 0
+    @input.each do |i|
+      i.each do |j|
+       splitinput = j[1].split(" ")
+       splitinput.each do |w|
+          if w.include? "\\n"
+            w.gsub!("\\n", "<br />")
+          end
+          wordCount(w)
+        end
       end
-      wordCount(w)
+      docnum += 1
     end
 
-    genOutput
+    @input.each do |i|
+      i.each do |j|
+        @output = @output + "<b>" + j[0] + ": " + "</b>" + genOutput(j[1], docnum) + "<br />"
+      end
+      @output = @output + "<br />"
+    end
     return @output
   end
 
   # Counts number of times a word shows up
   def wordCount(word)
-    commonwords = ["the", "and", "of", "a", "to", "is", "in", "its", "The", "on", "as", "for", "has", "will", "As", "or", "have", "while", "While", "that", "out", "such", "also", "by", "said", "with", "than", "only", "into", "an", "one", "other", "but", "for", "from", "<br />", "I", "more", "about", "About", "again", "Again", "against", "all", "are", "at", "be", "being", "been", "can", "could", "did", "do", "don't", "down", "up", "each", "few", "get", "got", "great", "had", "have", "has", "he", "her", "she", "he", "it", "we", "they", "if", "thus", "it's", "hers", "his", "how", "why", "when", "where", "just", "like", "you", "me", "my", "most", "more", "no", "not", "yes", "off", "once", "only", "our", "out", "over", "under", "own", "then", "some", "these", "there", "then", "this", "those", "too", "through", "between", "until", "very", "who", "with", "wouldn't", "would"]
+    commonwords = ["the", "and", "of", "a", "to", "is", "in", "its", "The", "on", "as", "for", "has", "will", "As", "or", "have", "while", "While", "that", "out", "such", "also", "by", "said", "with", "than", "only", "into", "an", "one", "other", "but", "for", "from", "<br />", "I", "more", "about", "About", "again", "Again", "against", "all", "are", "at", "be", "being", "been", "can", "could", "did", "do", "don't", "down", "up", "each", "few", "get", "got", "great", "had", "have", "has", "he", "her", "she", "he", "it", "we", "they", "if", "thus", "it's", "hers", "his", "how", "why", "when", "where", "just", "like", "you", "me", "my", "most", "more", "no", "not", "yes", "off", "once", "only", "our", "out", "over", "under", "own", "then", "some", "these", "there", "then", "this", "those", "too", "through", "between", "until", "very", "who", "with", "wouldn't", "would", "was", "were", "itself", "himself", "herself", "which", "make", "during", "before", "after", "if", "any", "become", "around", "several", "them", "their", "however"]
 
-    if (@wordhash[word]) && (!commonwords.include? word) 
+    # Make capitalized array of common words
+    commoncaps = Array.new
+    commonwords.each do |c|
+      commoncaps.push(c.capitalize)
+    end
+
+    if (@wordhash[word]) && (!commonwords.include? word) && (!commoncaps.include? word) 
       @wordhash[word] += 1
     else
       @wordhash[word] = 1
@@ -32,24 +50,33 @@ class WordCloud
   end
 
   # Generates HTML output based on word size
-  def genOutput
-    splitinput = @input.split(" ")
+  def genOutput(input, docnum)
+    splitinput = input.split(/ /)
+    output = ""
     
     splitinput.each do |w|
-      if w.include? "\\n"
-        w.gsub!("\\n", "<br />")
+      if w =~ /\n/
+        w.gsub!(/\n/, "<br />")
       end
 
       if @wordhash[w]
-        size = 10 + @wordhash[w]
+        size = 10 + @wordhash[w] 
+        if @wordhash[w] > 2
+         size = size - (docnum*0.1)
+        end
+
         if size > 18
           size = 18
-          @output = @output + " <span style=\"font-size:" + size.to_s + "px\"><b>" + w + "</b></span>"
+          output = output + " <span style=\"font-size:" + size.to_s + "px\"><b>" + w + "</b></span>"
         else
-          @output = @output + " <span style=\"font-size:" + size.to_s + "px\">" + w + "</span>"
+          output = output + " <span style=\"font-size:" + size.to_s + "px\">" + w + "</span>"
         end
+      else
+        output = output + " " + w
       end
     end
+
+    return output
   end
 end
 
