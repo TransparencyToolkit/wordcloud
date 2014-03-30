@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'wordcloud'
-  s.version     = '0.0.4'
+  s.version     = '0.0.10'
   s.date        = '2014-03-29'
   s.summary     = 'Outputs text with word size determined by their frequency'
   s.description = 'Takes input and outputs the same text with word size changed based on frequency.'

@@ -12,12 +12,14 @@ class WordCloud
     docnum = 0
     @input.each do |i|
       i.each do |j|
-       splitinput = j[1].split(" ")
-       splitinput.each do |w|
-          if w.include? "\\n"
-            w.gsub!("\\n", "<br />")
+        if (j[1] != nil) && (j[1].is_a? String)
+          splitinput = j[1].split(" ")
+          splitinput.each do |w|
+            if w.include? "\\n"
+              w.gsub!("\\n", "<br />")
+            end
+            wordCount(w)
           end
-          wordCount(w)
         end
       end
       docnum += 1
@@ -25,7 +27,11 @@ class WordCloud
 
     @input.each do |i|
       i.each do |j|
-        @output = @output + "<b>" + j[0] + ": " + "</b>" + genOutput(j[1], docnum) + "<br />"
+        if (j[1] != nil) && (j[1].is_a? String)
+          @output = @output + "<b>" + j[0] + ": " + "</b>" + genOutput(j[1], docnum) + "<br />"
+        else
+          @output = @output + "<b>" + j[0] + ": " + "</b>" + j[1].to_s + "<br />"
+        end
       end
       @output = @output + "<br />"
     end
