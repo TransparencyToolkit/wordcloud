@@ -1,17 +1,18 @@
 require 'json'
 
 class WordCloud
-  def initialize(input)
+  def initialize(input, type)
     @input = JSON.parse(input)
     @output = ""
     @wordhash = Hash.new
+    @type = type
   end
 
   # Splits corpus on words
   def parse   
     docnum = 0
-    @input.each do |i|
-      i.each do |j|
+    if @type == "single"
+      @input.each do |j|
         if (j[1] != nil) && (j[1].is_a? String)
           splitinput = j[1].split(" ")
           splitinput.each do |w|
@@ -21,12 +22,10 @@ class WordCloud
             wordCount(w)
           end
         end
+        docnum += 1
       end
-      docnum += 1
-    end
 
-    @input.each do |i|
-      i.each do |j|
+      @input.each do |j|
         if (j[1] != nil) && (j[1].is_a? String)
           @output = @output + "<b>" + j[0] + ": " + "</b>" + genOutput(j[1], docnum) + "<br />"
         else
@@ -34,6 +33,33 @@ class WordCloud
         end
       end
       @output = @output + "<br />"
+
+    elsif @type == "multiple"
+      @input.each do |i|
+        i.each do |j|
+          if (j[1] != nil) && (j[1].is_a? String)
+            splitinput = j[1].split(" ")
+            splitinput.each do |w|
+              if w.include? "\\n"
+                w.gsub!("\\n", "<br />")
+              end
+              wordCount(w)
+            end
+          end
+        end
+        docnum += 1
+      end
+
+      @input.each do |i|
+        i.each do |j|
+          if (j[1] != nil) && (j[1].is_a? String)
+            @output = @output + "<b>" + j[0] + ": " + "</b>" + genOutput(j[1], docnum) + "<br />"
+          else
+            @output = @output + "<b>" + j[0] + ": " + "</b>" + j[1].to_s + "<br />"
+          end
+        end
+        @output = @output + "<br />"
+      end
     end
     return @output
   end
@@ -85,4 +111,3 @@ class WordCloud
     return output
   end
 end
-
