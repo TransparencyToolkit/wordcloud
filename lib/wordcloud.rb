@@ -5,85 +5,133 @@ class WordCloud
     @input = JSON.parse(input)
     @output = ""
     @wordhash = Hash.new
+    @tfarray = Array.new
+    @idfarray = Array.new
     @type = type
+    @tfidfhash = Hash.new
   end
 
-  # Splits corpus on words
-  def parse   
-    docnum = 0
+  def parse
+    # Check if it is a single doc
     if @type == "single"
-      @input.each do |j|
-        if (j[1] != nil) && (j[1].is_a? String)
-          splitinput = j[1].split(" ")
-          splitinput.each do |w|
-            if w.include? "\\n"
-              w.gsub!("\\n", "<br />")
-            end
-            wordCount(w)
-          end
-        end
-        docnum += 1
+      # Get tfidf info
+      @tfarray.push(wordCount(@input))
+      idfhash = Hash.new
+      @tfarray[0].each do |t|
+        idfhash[t[0]] = 1
       end
+      @idfarray.push(idfhash)
+      tfidf(@tfarray[0], @idfarray[0])
 
+      # Format output
+      @output = " "
       @input.each do |j|
         if (j[1] != nil) && (j[1].is_a? String)
-          @output = @output + "<b>" + j[0] + ": " + "</b>" + genOutput(j[1], docnum) + "<br />"
+          @output = @output + "<b>" + j[0] + ": " + "</b>" + formatField(j[1], @tfidfhash) + "<br />"
         else
-          @output = @output + "<b>" + j[0] + ": " + "</b>" + j[1].to_s + "<br />"
+          @output = @output + "<b>" + j[0].to_s + ": " + "</b>" + j[1].to_s + "<br />"
         end
       end
       @output = @output + "<br />"
 
-    elsif @type == "multiple"
-      @input.each do |i|
-        i.each do |j|
-          if (j[1] != nil) && (j[1].is_a? String)
-            splitinput = j[1].split(" ")
-            splitinput.each do |w|
-              if w.include? "\\n"
-                w.gsub!("\\n", "<br />")
-              end
-              wordCount(w)
-            end
-          end
-        end
-        docnum += 1
-      end
 
+    # Handle multiple docs
+    elsif @type == "multiple"
+      docnum = 0
+      @input.each do |i|
+        docnum += 1
+        @tfarray.push(wordCount(i))
+      end
+      tfidf(@tfarray, idf(@tfarray, docnum))
+
+      index = 0
       @input.each do |i|
         i.each do |j|
           if (j[1] != nil) && (j[1].is_a? String)
-            @output = @output + "<b>" + j[0] + ": " + "</b>" + genOutput(j[1], docnum) + "<br />"
+            @output = @output + "<b>" + j[0] + ": " + "</b>" + formatField(j[1], @tfidfhash) + "<br />"
           else
             @output = @output + "<b>" + j[0] + ": " + "</b>" + j[1].to_s + "<br />"
           end
         end
+        index += 1
         @output = @output + "<br />"
       end
     end
+    
     return @output
   end
 
-  # Counts number of times a word shows up
-  def wordCount(word)
-    commonwords = ["the", "and", "of", "a", "to", "is", "in", "its", "The", "on", "as", "for", "has", "will", "As", "or", "have", "while", "While", "that", "out", "such", "also", "by", "said", "with", "than", "only", "into", "an", "one", "other", "but", "for", "from", "<br />", "I", "more", "about", "About", "again", "Again", "against", "all", "are", "at", "be", "being", "been", "can", "could", "did", "do", "don't", "down", "up", "each", "few", "get", "got", "great", "had", "have", "has", "he", "her", "she", "he", "it", "we", "they", "if", "thus", "it's", "hers", "his", "how", "why", "when", "where", "just", "like", "you", "me", "my", "most", "more", "no", "not", "yes", "off", "once", "only", "our", "out", "over", "under", "own", "then", "some", "these", "there", "then", "this", "those", "too", "through", "between", "until", "very", "who", "with", "wouldn't", "would", "was", "were", "itself", "himself", "herself", "which", "make", "during", "before", "after", "if", "any", "become", "around", "several", "them", "their", "however"]
+  # Count the number of words in documents
+  def wordCount(doc)
+    @wordhash = Hash.new
 
-    # Make capitalized array of common words
-    commoncaps = Array.new
-    commonwords.each do |c|
-      commoncaps.push(c.capitalize)
+    doc.each do |j|
+      if (j[1] != nil) && (j[1].is_a? String)
+        splitinput = j[1].split(" ")
+        splitinput.each do |w|
+          if w.include? "\\n"
+            w.gsub!("\\n", "<br />")
+          end
+          
+          # Add or increment
+          if @wordhash[w]
+            @wordhash[w] += 1
+          else
+            @wordhash[w] = 1
+          end
+        end
+      end
     end
 
-    if (@wordhash[word]) && (!commonwords.include? word) && (!commoncaps.include? word) 
-      @wordhash[word] += 1
-    else
-      @wordhash[word] = 1
+    # Get tf
+    terms = @wordhash.length
+    @tf = Hash.new
+    @wordhash.each do |h|
+      @tf[h[0]] = h[1].to_f/terms.to_f
     end
+    
+    return @tf
   end
 
-  # Generates HTML output based on word size
-  def genOutput(input, docnum)
-    splitinput = input.split(/ /)
+  # Calculate tf-idf
+  def tfidf(tf, idf)
+    # Add support for one doc
+    tf.each do |t|
+      t.each do |r|
+        if idf[r[0]]
+          @tfidfhash[r[0]] = idf[r[0]]*r[1]
+        end
+      end
+    end
+
+    return @tfidfhash
+  end
+
+  # Calculate idf
+  def idf(tfarray, docnum)
+    idfhash = Hash.new
+    
+    tfarray.each do |h|
+      h.each do |w|
+        if idfhash[w[0]]
+          idfhash[w[0]] += 1
+        else
+          idfhash[w[0]] = 1
+        end
+      end
+    end
+
+    # Calculate idf
+    idfcalchash = Hash.new
+    idfhash.each do |i|
+      idfcalchash[i[0]] = Math.log(docnum.to_f/i[1].to_f)
+    end
+
+    return idfcalchash
+  end
+
+  def formatField(field, wordhash)
+    splitinput = field.split(/ /)
     output = ""
     
     splitinput.each do |w|
@@ -91,14 +139,13 @@ class WordCloud
         w.gsub!(/\n/, "<br />")
       end
 
-      if @wordhash[w]
-        size = 10 + @wordhash[w] 
-        if @wordhash[w] > 2
-         size = size - (docnum*0.1)
-        end
-
-        if size > 18
-          size = 18
+      if wordhash[w]
+        # Set size
+        size = 10.to_f + (wordhash[w]*2500.to_f)
+        
+        # Do formatting
+        if size > 25
+          size = 25
           output = output + " <span style=\"font-size:" + size.to_s + "px\"><b>" + w + "</b></span>"
         else
           output = output + " <span style=\"font-size:" + size.to_s + "px\">" + w + "</span>"
